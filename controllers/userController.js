@@ -1,7 +1,6 @@
 import { db } from "../config/firebase.js"
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore"
 
-// Listar todos os usuários
 export const getAllUsers = async (req, res) => {
   try {
     const usersCollection = collection(db, "users")
@@ -22,7 +21,6 @@ export const getAllUsers = async (req, res) => {
   }
 }
 
-// Buscar usuário por ID
 export const getUserById = async (req, res) => {
   try {
     const { id } = req.params
@@ -48,12 +46,10 @@ const getNextUserId = async () => {
   return snapshot.size + 1
 }
 
-// Criar novo usuário
 export const createUser = async (req, res) => {
   try {
     const { name, email, age } = req.body
 
-    // Validação simples
     if (!name || !email) {
       return res.status(400).json({ error: "Nome e email são obrigatórios" })
     }
@@ -61,7 +57,6 @@ export const createUser = async (req, res) => {
     const nextId = await getNextUserId()
     const userId = nextId.toString()
 
-    // Dados do usuário
     const userData = {
       name,
       email,
@@ -82,7 +77,6 @@ export const createUser = async (req, res) => {
   }
 }
 
-// Atualizar usuário
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params
@@ -95,7 +89,6 @@ export const updateUser = async (req, res) => {
       return res.status(404).json({ error: "Usuário não encontrado" })
     }
 
-    // Dados para atualizar
     const updateData = {}
     if (name) updateData.name = name
     if (email) updateData.email = email
@@ -110,7 +103,6 @@ export const updateUser = async (req, res) => {
   }
 }
 
-// Deletar usuário
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params
