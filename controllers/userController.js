@@ -1,15 +1,13 @@
 import { db } from "../config/firebase.js"
-
-// Coleção de usuários no Firestore
-const users = db.collection("users")
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore"
 
 // Listar todos os usuários
 export const getAllUsers = async (req, res) => {
   try {
-    const snapshot = await users.get()
-    const userList = []
+    const usersCollection = collection(db, "users")
+    const snapshot = await getDocs(usersCollection)
 
-    // Percorrer todos os documentos
+    const userList = []
     snapshot.forEach((doc) => {
       userList.push({
         id: doc.id,
@@ -19,6 +17,7 @@ export const getAllUsers = async (req, res) => {
 
     res.json(userList)
   } catch (error) {
+    console.log("Erro ao buscar usuários:", error.message)
     res.status(500).json({ error: "Erro ao buscar usuários" })
   }
 }
@@ -27,44 +26,54 @@ export const getAllUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const { id } = req.params
-    const doc = await users.doc(id).get()
+    const userDoc = doc(db, "users", id)
+    const docSnap = await getDoc(userDoc)
 
-    if (!doc.exists) {
+    if (!docSnap.exists()) {
       return res.status(404).json({ error: "Usuário não encontrado" })
     }
 
     res.json({
-      id: doc.id,
-      ...doc.data(),
+      id: docSnap.id,
+      ...docSnap.data(),
     })
   } catch (error) {
     res.status(500).json({ error: "Erro ao buscar usuário" })
   }
 }
 
+const getNextUserId = async () => {
+  const usersCollection = collection(db, "users")
+  const snapshot = await getDocs(usersCollection)
+  return snapshot.size + 1
+}
+
 // Criar novo usuário
 export const createUser = async (req, res) => {
   try {
-    const { nome, email, idade } = req.body
+    const { name, email, age } = req.body
 
     // Validação simples
-    if (!nome || !email) {
+    if (!name || !email) {
       return res.status(400).json({ error: "Nome e email são obrigatórios" })
     }
 
+    const nextId = await getNextUserId()
+    const userId = nextId.toString()
+
     // Dados do usuário
     const userData = {
-      nome,
+      name,
       email,
-      idade: idade || null,
+      age: age || null,
       criadoEm: new Date(),
     }
 
-    // Adicionar no Firestore
-    const docRef = await users.add(userData)
+    const userDoc = doc(db, "users", userId)
+    await setDoc(userDoc, userData)
 
     res.status(201).json({
-      id: docRef.id,
+      id: userId,
       ...userData,
       message: "Usuário criado com sucesso",
     })
@@ -77,23 +86,23 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params
-    const { nome, email, idade } = req.body
+    const { name, email, age } = req.body
 
-    // Verificar se usuário existe
-    const doc = await users.doc(id).get()
-    if (!doc.exists) {
+    const userDoc = doc(db, "users", id)
+    const docSnap = await getDoc(userDoc)
+
+    if (!docSnap.exists()) {
       return res.status(404).json({ error: "Usuário não encontrado" })
     }
 
     // Dados para atualizar
     const updateData = {}
-    if (nome) updateData.nome = nome
+    if (name) updateData.name = name
     if (email) updateData.email = email
-    if (idade) updateData.idade = idade
+    if (age) updateData.age = age
     updateData.atualizadoEm = new Date()
 
-    // Atualizar no Firestore
-    await users.doc(id).update(updateData)
+    await updateDoc(userDoc, updateData)
 
     res.json({ message: "Usuário atualizado com sucesso" })
   } catch (error) {
@@ -106,14 +115,14 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params
 
-    // Verificar se usuário existe
-    const doc = await users.doc(id).get()
-    if (!doc.exists) {
+    const userDoc = doc(db, "users", id)
+    const docSnap = await getDoc(userDoc)
+
+    if (!docSnap.exists()) {
       return res.status(404).json({ error: "Usuário não encontrado" })
     }
 
-    // Deletar do Firestore
-    await users.doc(id).delete()
+    await deleteDoc(userDoc)
 
     res.json({ message: "Usuário deletado com sucesso" })
   } catch (error) {
